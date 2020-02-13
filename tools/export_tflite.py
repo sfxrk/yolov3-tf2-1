@@ -4,9 +4,7 @@ from absl.flags import FLAGS
 import cv2
 import numpy as np
 import tensorflow as tf
-from yolov3_tf2.models import (
-    YoloV3, YoloV3Tiny
-)
+from yolov3_tf2.models import YoloV3
 from yolov3_tf2.dataset import transform_images
 
 from tensorflow.python.eager import def_function
@@ -15,7 +13,6 @@ from tensorflow.python.util import nest
 
 flags.DEFINE_string('weights', './checkpoints/yolov3.tf',
                     'path to weights file')
-flags.DEFINE_boolean('tiny', False, 'yolov3 or yolov3-tiny')
 flags.DEFINE_string('output', './checkpoints/yolov3.tflite',
                     'path to saved_model')
 flags.DEFINE_string('classes', './data/coco.names', 'path to classes file')
@@ -25,11 +22,7 @@ flags.DEFINE_integer('size', 416, 'image size')
 
 # TODO: This is broken DOES NOT WORK !!
 def main(_argv):
-    if FLAGS.tiny:
-        yolo = YoloV3Tiny(size=FLAGS.size, classes=FLAGS.num_classes)
-    else:
-        yolo = YoloV3(size=FLAGS.size, classes=FLAGS.num_classes)
-
+    yolo = YoloV3(size=FLAGS.size, classes=FLAGS.num_classes)
     yolo.load_weights(FLAGS.weights)
     logging.info('weights loaded')
 

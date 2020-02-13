@@ -13,9 +13,8 @@ from tensorflow.keras.callbacks import (
     TensorBoard
 )
 from yolov3_tf2.models import (
-    YoloV3, YoloV3Tiny, YoloLoss,
-    yolo_anchors, yolo_anchor_masks,
-    yolo_tiny_anchors, yolo_tiny_anchor_masks
+    YoloV3, YoloLoss,
+    yolo_anchors, yolo_anchor_masks
 )
 from yolov3_tf2.utils import freeze_all
 import yolov3_tf2.dataset as dataset
@@ -27,7 +26,7 @@ python train.py --batch_size 1 \
     --val_dataset ./data/aop_val.tfrecord \
     --num_classes 10 \
     --classes ./data/aop.names \
-    --epochs 10 \
+    --epochs 2 \
     --mode fit \
     --transfer darknet \
     --weights_num_classes 80
@@ -44,7 +43,6 @@ python train.py --batch_size 1 \
 
 flags.DEFINE_string('dataset', '', 'path to dataset')
 flags.DEFINE_string('val_dataset', '', 'path to validation dataset')
-flags.DEFINE_boolean('tiny', False, 'yolov3 or yolov3-tiny')
 flags.DEFINE_string('weights', './checkpoints/yolov3.tf',
                     'path to weights file')
 flags.DEFINE_string('classes', './data/coco.names', 'path to classes file')
@@ -73,20 +71,13 @@ def main(_argv):
     if len(physical_devices) > 0:
         tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
-    if FLAGS.tiny:
-        model = YoloV3Tiny(FLAGS.size, training=True,
-                           classes=FLAGS.num_classes)
-        anchors = yolo_tiny_anchors
-        anchor_masks = yolo_tiny_anchor_masks
-    else:
-        model = YoloV3(FLAGS.size, training=True, classes=FLAGS.num_classes)
-        anchors = yolo_anchors
-        anchor_masks = yolo_anchor_masks
+    model = YoloV3(FLAGS.size, training=True, classes=FLAGS.num_classes)
+    anchors = yolo_anchors
+    anchor_masks = yolo_anchor_masks
 
     train_dataset = dataset.load_fake_dataset()
     if FLAGS.dataset:
-        train_dataset = dataset.load_tfrecord_dataset(
-            FLAGS.dataset, FLAGS.classes, FLAGS.size)
+        train_dataset = dataset.load_tfrecord_dataset(FLAGS.dataset, FLAGS.classes, FLAGS.size)
     train_dataset = train_dataset.shuffle(buffer_size=512)
     train_dataset = train_dataset.batch(FLAGS.batch_size)
     train_dataset = train_dataset.map(lambda x, y: (
@@ -112,12 +103,8 @@ def main(_argv):
         # with incompatible number of classes
 
         # reset top layers
-        if FLAGS.tiny:
-            model_pretrained = YoloV3Tiny(
-                FLAGS.size, training=True, classes=FLAGS.weights_num_classes or FLAGS.num_classes)
-        else:
-            model_pretrained = YoloV3(
-                FLAGS.size, training=True, classes=FLAGS.weights_num_classes or FLAGS.num_classes)
+        model_pretrained = YoloV3(FLAGS.size, training=True, 
+                                  classes=FLAGS.weights_num_classes or FLAGS.num_classes)
         model_pretrained.load_weights(FLAGS.weights)
 
         if FLAGS.transfer == 'darknet':
