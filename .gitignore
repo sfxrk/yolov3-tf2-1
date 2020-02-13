@@ -5,7 +5,7 @@
 /checkpoints/*
 /serving/*
 /logs/
-/Untitled.ipynb
+/logs_ref/
 /output.jpg
 /data/voc2012_raw/
 /data/*.weights
