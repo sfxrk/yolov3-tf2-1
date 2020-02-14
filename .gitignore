@@ -4,12 +4,10 @@
 *.tfrecord
 /checkpoints/*
 /serving/*
-/logs/
-/logs_ref/
+/logs_*/*
+/logs/*
 /output.jpg
 /data/voc2012_raw/
-/data/*.weights
-/data/*.tfrecord
 .idea/
 /outputs
 /test_yw
