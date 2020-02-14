@@ -2,7 +2,6 @@ import os
 from datetime import datetime
 from absl import app, flags, logging
 from absl.flags import FLAGS
-
 import tensorflow as tf
 import numpy as np
 import cv2
@@ -10,16 +9,13 @@ from tensorflow.keras.callbacks import (
     ReduceLROnPlateau,
     EarlyStopping,
     ModelCheckpoint,
-    TensorBoard
-)
+    TensorBoard)
 from yolov3_tf2.models import (
     YoloV3, YoloLoss,
-    yolo_anchors, yolo_anchor_masks
-)
+    yolo_anchors, yolo_anchor_masks)
 from yolov3_tf2.utils import freeze_all
 import yolov3_tf2.dataset as dataset
 
-# python train.py --batch_size 1 --dataset ./data/voc2012_train.tfrecord --val_dataset ./data/voc2012_val.tfrecord --epochs 10 --mode fit --transfer fine_tune
 """
 python train.py --batch_size 1 \
     --dataset ./data/aop_train.tfrecord \
@@ -30,17 +26,7 @@ python train.py --batch_size 1 \
     --mode fit \
     --transfer darknet \
     --weights_num_classes 80
-
-python train.py --batch_size 1 \
-    --dataset ./data/aop_train.tfrecord \
-    --val_dataset ./data/aop_val.tfrecord \
-    --num_classes 10 \
-    --classes ./data/aop.names \
-    --epochs 10 \
-    --mode fit \
-    --transfer none
 """
-
 flags.DEFINE_string('dataset', '', 'path to dataset')
 flags.DEFINE_string('val_dataset', '', 'path to validation dataset')
 flags.DEFINE_string('weights', './checkpoints/yolov3.tf',
