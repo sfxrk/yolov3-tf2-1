@@ -15,7 +15,7 @@ python tools/visualize_dataset.py \
     --classes data/voc2012.names \
     --dataset data/voc2012_train.tfrecord \
     --N 10 \
-    --random=True \
+    --random=False \
     --out_dir outputs/voc2012
     
 python tools/visualize_dataset.py \
@@ -55,7 +55,7 @@ def main(_argv):
     # print("debug: *********", os.path.abspath(inspect.getfile(load_tfrecord_dataset)))
     # print("debug: ********* ", inspect.signature(load_tfrecord_dataset))
     # print("debug: ********* random =", FLAGS.random)
-    dataset = load_tfrecord_dataset(FLAGS.dataset, FLAGS.classes, FLAGS.size)
+    dataset = load_tfrecord_dataset(FLAGS.dataset, FLAGS.classes, FLAGS.size, FLAGS.yolo_max_boxes)
     if FLAGS.random:
         dataset = dataset.shuffle(512)
     for ii, (image, labels) in enumerate(dataset.take(FLAGS.N)):

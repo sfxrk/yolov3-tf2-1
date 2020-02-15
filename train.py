@@ -18,19 +18,19 @@ import yolov3_tf2.dataset as dataset
 
 """
 python train.py --batch_size 1 \
-    --dataset ./data/aop_train.tfrecord \
-    --val_dataset ./data/aop_val.tfrecord \
+    --dataset data/aop_train.tfrecord \
+    --val_dataset data/aop_val.tfrecord \
     --num_classes 10 \
-    --classes ./data/aop.names \
+    --classes data/aop.names \
     --epochs 2 \
     --mode fit \
     --transfer darknet \
     --weights_num_classes 80
 """
-flags.DEFINE_string('dataset', '', 'path to dataset')
-flags.DEFINE_string('val_dataset', '', 'path to validation dataset')
-flags.DEFINE_string('weights', './checkpoints/yolov3.tf', 'path to weights file')
-flags.DEFINE_string('classes', './data/coco.names', 'path to classes file')
+flags.DEFINE_string('dataset', 'data/aop_train.tfrecord', 'path to dataset')
+flags.DEFINE_string('val_dataset', 'data/aop_val.tfrecord', 'path to validation dataset')
+flags.DEFINE_string('classes', 'data/aop.names', 'path to classes file')
+flags.DEFINE_string('weights', 'checkpoints/yolov3.tf', 'path to weights file')
 flags.DEFINE_enum('mode', 'fit', ['fit', 'eager_fit', 'eager_tf'],
                   'fit: model.fit, '
                   'eager_fit: model.fit(run_eagerly=True), '
@@ -120,7 +120,6 @@ def main(_argv):
     optimizer = tf.keras.optimizers.Adam(lr=FLAGS.learning_rate)
     loss = [YoloLoss(anchors[mask], classes=FLAGS.num_classes)
             for mask in anchor_masks]
-
     if FLAGS.mode == 'eager_tf':
         # Eager mode is great for debugging
         # Non eager graph mode is recommended for real training
@@ -166,21 +165,16 @@ def main(_argv):
 
             avg_loss.reset_states()
             avg_val_loss.reset_states()
-            model.save_weights(
-                'checkpoints/yolov3_train_{}.tf'.format(epoch))
+            model.save_weights('checkpoints/train_{}.tf'.format(epoch))
     else:
         model.compile(optimizer=optimizer, loss=loss,
                       run_eagerly=(FLAGS.mode == 'eager_fit'))
         log_dir = os.path.join("logs", datetime.now().strftime('%Y%m%d-%H%M%S'))
-
         callbacks = [
             ReduceLROnPlateau(verbose=1),
             EarlyStopping(patience=3, verbose=1),
-            ModelCheckpoint('checkpoints/yolov3_train_{epoch}.tf',
-                            verbose=1, save_weights_only=True),
-            TensorBoard(log_dir=log_dir, update_freq='batch')
-        ]
-
+            ModelCheckpoint('checkpoints/train_{epoch}.tf', verbose=1, save_weights_only=True),
+            TensorBoard(log_dir=log_dir, update_freq='batch', profile_batch=0)]
         history = model.fit(train_dataset,
                             epochs=FLAGS.epochs,
                             callbacks=callbacks,
