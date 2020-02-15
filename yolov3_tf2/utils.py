@@ -98,19 +98,6 @@ def broadcast_iou(box_1, box_2):
         (box_2[..., 3] - box_2[..., 1])
     return int_area / (box_1_area + box_2_area - int_area)
 
-
-# def draw_outputs(img, outputs, class_names):
-#     boxes, objectness, classes, nums = outputs
-#     boxes, objectness, classes, nums = boxes[0], objectness[0], classes[0], nums[0]
-#     wh = np.flip(img.shape[0:2])
-#     for i in range(nums):
-#         x1y1 = tuple((np.array(boxes[i][0:2]) * wh).astype(np.int32))
-#         x2y2 = tuple((np.array(boxes[i][2:4]) * wh).astype(np.int32))
-#         img = cv2.rectangle(img, x1y1, x2y2, (255, 0, 0), 2)
-#         img = cv2.putText(img, '{} {:.4f}'.format(
-#             class_names[int(classes[i])], objectness[i]),
-#             x1y1, cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (0, 0, 255), 2)
-#     return img
 def get_class_colors(num_classes):
     hsv_tuples = [(1.0 * x / num_classes, 1., 1.) for x in range(num_classes)]
     colors = list(map(lambda x: colorsys.hsv_to_rgb(*x), hsv_tuples))
@@ -123,12 +110,12 @@ def get_class_colors(num_classes):
 def draw_outputs(img, outputs, class_names):
     fontScale = 0.5
     fontFace = cv2.FONT_HERSHEY_SIMPLEX
-    boxes, objectness, classes, nums = outputs
-    boxes, objectness, classes, nums = boxes[0], objectness[0], classes[0], nums[0]
+    boxes, objectness, classes = outputs
+    num_boxes = len(boxes)
     wh = np.flip(img.shape[0:2])
     colors = get_class_colors(len(class_names))
     bbox_thick = int(0.6 * (wh[1] + wh[0]) / 600)
-    for i in range(nums):
+    for i in range(num_boxes):
         class_ind = int(classes[i])
         class_color = colors[class_ind]
         x1y1 = tuple((np.array(boxes[i][0:2]) * wh).astype(np.int32))

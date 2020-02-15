@@ -8,12 +8,11 @@ import tensorflow as tf
 import lxml.etree
 import tqdm
 
-flags.DEFINE_string('data_dir', './data/voc2012_raw/VOCdevkit/VOC2012/',
-                    'path to raw PASCAL VOC dataset')
-flags.DEFINE_enum('split', 'train', [
-                  'train', 'val'], 'specify train or val spit')
-flags.DEFINE_string('output_file', './data/voc2012_train.tfrecord', 'outpot dataset')
-flags.DEFINE_string('classes', './data/voc2012.names', 'classes file')
+# convert voc2012 format to tfrecord
+flags.DEFINE_string('output_file', 'data/voc2012_train.tfrecord', 'outpot tfrecord dataset')
+flags.DEFINE_string('data_dir', 'data/voc2012_raw/VOCdevkit/VOC2012/', 'path to raw VOC2012 dataset')
+flags.DEFINE_enum('split', 'train', ['train', 'val'], 'specify train or val spit')
+flags.DEFINE_string('classes', 'data/voc2012.names', 'classes file')
 
 
 def build_example(annotation, class_map):
