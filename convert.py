@@ -8,7 +8,7 @@ flags.DEFINE_string('weights', './data/yolov3.weights', 'path to weights file')
 flags.DEFINE_string('output', './checkpoints/yolov3.tf', 'path to output')
 flags.DEFINE_integer('num_classes', 80, 'number of classes in the model')
 
-# convert yolov3.weights to yolove.tf weights (checkpoint)
+# convert yolov3.weights to yolov3.tf weights (checkpoint)
 def main(_argv):
     yolo = YoloV3(classes=FLAGS.num_classes)
     yolo.summary()

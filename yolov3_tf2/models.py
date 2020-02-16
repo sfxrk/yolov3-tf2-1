@@ -12,19 +12,14 @@ from tensorflow.keras.layers import (
     LeakyReLU,
     MaxPool2D,
     UpSampling2D,
-    ZeroPadding2D,
-)
+    ZeroPadding2D)
 from tensorflow.keras.regularizers import l2
 from tensorflow.keras.losses import (
     binary_crossentropy,
-    sparse_categorical_crossentropy
-)
+    sparse_categorical_crossentropy)
 from .batch_norm import BatchNormalization
 from .utils import broadcast_iou
 
-# flags.DEFINE_integer('yolo_max_boxes', 100, 'maximum number of boxes per image')
-# flags.DEFINE_float('yolo_iou_threshold', 0.5, 'iou threshold')
-# flags.DEFINE_float('yolo_score_threshold', 0.5, 'score threshold')
 # todo: make FLAGS as function input arguments, instead of FLAGS
 yolo_anchors = np.array([(10, 13), (16, 30), (33, 23), (30, 61), (62, 45),
                          (59, 119), (116, 90), (156, 198), (373, 326)],
@@ -34,7 +29,7 @@ yolo_anchor_masks = np.array([[6, 7, 8], [3, 4, 5], [0, 1, 2]])
 
 def DarknetConv(x, filters, size, strides=1, batch_norm=True):
     """ 
-    DBL
+    DBL: conv, bn, leakyrelu
     """
     if strides == 1:
         padding = 'same'
@@ -76,13 +71,16 @@ def Darknet(name=None):
     x = DarknetConv(x, 32, 3)
     x = DarknetBlock(x, 64, 1)
     x = DarknetBlock(x, 128, 2)  # skip connection
-    x = x_36 = DarknetBlock(x, 256, 8)  # skip connection
-    x = x_61 = DarknetBlock(x, 512, 8)
-    x = DarknetBlock(x, 1024, 4)
+    x = x_36 = DarknetBlock(x, 256, 8)  # skip connection, for y3
+    x = x_61 = DarknetBlock(x, 512, 8) # for y2
+    x = DarknetBlock(x, 1024, 4) # for y1
     return tf.keras.Model(inputs, (x_36, x_61, x), name=name)
 
 
 def YoloConv(filters, name=None):
+    """ 
+    DBL * 5
+    """
     def yolo_conv(x_in):
         if isinstance(x_in, tuple):
             inputs = Input(x_in[0].shape[1:]), Input(x_in[1].shape[1:])
@@ -94,7 +92,6 @@ def YoloConv(filters, name=None):
             x = Concatenate()([x, x_skip])
         else:
             x = inputs = Input(x_in.shape[1:])
-
         x = DarknetConv(x, filters, 1)
         x = DarknetConv(x, filters * 2, 3)
         x = DarknetConv(x, filters, 1)
@@ -104,19 +101,25 @@ def YoloConv(filters, name=None):
     return yolo_conv
 
 
-def YoloOutput(filters, anchors, classes, name=None):
+def YoloOutput(filters, num_anchors, classes, name=None):
+    """ 
+    DBL, conv
+    filters: number of filters
+    num_anchors: number of anchor boxes per grid cell, 3
+    """
     def yolo_output(x_in):
         x = inputs = Input(x_in.shape[1:])
         x = DarknetConv(x, filters * 2, 3)
-        x = DarknetConv(x, anchors * (classes + 5), 1, batch_norm=False)
+        x = DarknetConv(x, num_anchors * (classes + 5), 1, batch_norm=False)
         x = Lambda(lambda x: tf.reshape(x, (-1, tf.shape(x)[1], tf.shape(x)[2],
-                                            anchors, classes + 5)))(x)
+                                            num_anchors, classes + 5)))(x)
         return tf.keras.Model(inputs, x, name=name)(x_in)
     return yolo_output
 
 
 def yolo_boxes(pred, anchors, classes):
-    # pred: (batch_size, grid, grid, anchors, (x, y, w, h, obj, ...classes))
+    # pred: (batch_size, grid, grid, anchors, (xc, yc, w, h, obj, ...classes))
+    # grid_size: 13, 26, or 52
     grid_size = tf.shape(pred)[1]
     box_xy, box_wh, objectness, class_probs = tf.split(
         pred, (2, 2, 1, classes), axis=-1)
@@ -171,15 +174,15 @@ def yolo_nms(outputs, anchors, masks, classes):
 def YoloV3(size=None, channels=3, anchors=yolo_anchors,
            masks=yolo_anchor_masks, classes=80, training=False):
     x = inputs = Input([size, size, channels], name='input')
-
+    # output for branches y3, y2, y1 respectively
     x_36, x_61, x = Darknet(name='yolo_darknet')(x)
-
+    # y1: for large objects
     x = YoloConv(512, name='yolo_conv_0')(x)
     output_0 = YoloOutput(512, len(masks[0]), classes, name='yolo_output_0')(x)
-
+    # y2: for medium objects
     x = YoloConv(256, name='yolo_conv_1')((x, x_61))
     output_1 = YoloOutput(256, len(masks[1]), classes, name='yolo_output_1')(x)
-
+    # y3: for small objects
     x = YoloConv(128, name='yolo_conv_2')((x, x_36))
     output_2 = YoloOutput(128, len(masks[2]), classes, name='yolo_output_2')(x)
 
@@ -202,7 +205,7 @@ def YoloV3(size=None, channels=3, anchors=yolo_anchors,
 def YoloLoss(anchors, classes=80, ignore_thresh=0.5):
     def yolo_loss(y_true, y_pred):
         # 1. transform all pred outputs
-        # y_pred: (batch_size, grid, grid, anchors, (x, y, w, h, obj, ...cls))
+        # y_pred: (batch_size, grid, grid, anchors, (xc, yc, w, h, obj, ...cls))
         pred_box, pred_obj, pred_class, pred_xywh = yolo_boxes(
             y_pred, anchors, classes)
         pred_xy = pred_xywh[..., 0:2]
@@ -210,8 +213,8 @@ def YoloLoss(anchors, classes=80, ignore_thresh=0.5):
 
         # 2. transform all true outputs
         # y_true: (batch_size, grid, grid, anchors, (x1, y1, x2, y2, obj, cls))
-        true_box, true_obj, true_class_idx = tf.split(
-            y_true, (4, 1, 1), axis=-1)
+        true_box, true_obj, true_class_idx = tf.split(y_true, (4, 1, 1), axis=-1)
+        # convert label bbox to yolo bbox: (xc, yc, w, h)
         true_xy = (true_box[..., 0:2] + true_box[..., 2:4]) / 2
         true_wh = true_box[..., 2:4] - true_box[..., 0:2]
 

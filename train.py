@@ -46,8 +46,8 @@ flags.DEFINE_integer('size', 416, 'image resize')
 flags.DEFINE_integer('epochs', 2, 'number of epochs')
 flags.DEFINE_integer('batch_size', 8, 'batch size')
 flags.DEFINE_float('learning_rate', 1e-3, 'learning rate')
-flags.DEFINE_integer('num_classes', 80, 'number of classes in the model')
-flags.DEFINE_integer('weights_num_classes', None, 'specify num class for `weights` file if different, '
+flags.DEFINE_integer('num_classes', 10, 'number of classes in the model')
+flags.DEFINE_integer('weights_num_classes', 80, 'specify num class for `weights` file if different, '
                      'useful in transfer learning with different number of classes')
 flags.DEFINE_integer('yolo_max_boxes', 100, 'maximum number of boxes per image')
 flags.DEFINE_float('yolo_iou_threshold', 0.5, 'iou threshold')
