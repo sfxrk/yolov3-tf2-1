@@ -129,15 +129,14 @@ def yolo_boxes(pred, anchors, classes):
     class_probs = tf.sigmoid(class_probs)
     pred_box = tf.concat((box_xy, box_wh), axis=-1)  # original xywh for loss
 
-    # !!! grid[x][y] == (y, x)
-    grid = tf.meshgrid(tf.range(grid_size), tf.range(grid_size))
+    # grid[x][y] == (y, x)
+    # gx is grid_size * grid_size
+    grid = tf.meshgrid(tf.range(grid_size), tf.range(grid_size)) # [gx, gy]
     grid = tf.expand_dims(tf.stack(grid, axis=-1), axis=2)  # [gx, gy, 1, 2]
-    # test yw: according to the paper, grid is is normalized, cx, cy is within (0, 1)
-    box_xy = box_xy + tf.cast(grid, tf.float32) / tf.cast(grid_size, tf.float32)
-    # original yolov3-tf2 code
-    # box_xy = (box_xy + tf.cast(grid, tf.float32)) / tf.cast(grid_size, tf.float32)
+    # each grid cell has size 1 * 1 
+    box_xy = (box_xy + tf.cast(grid, tf.float32)) / tf.cast(grid_size, tf.float32)
     box_wh = tf.exp(box_wh) * anchors
-
+    # [xc, yc, w, h] to [x1, y1, x2, y2]
     box_x1y1 = box_xy - box_wh / 2
     box_x2y2 = box_xy + box_wh / 2
     bbox = tf.concat([box_x1y1, box_x2y2], axis=-1)
