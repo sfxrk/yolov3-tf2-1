@@ -100,7 +100,8 @@ IMAGE_FEATURE_MAP = {
 def parse_tfrecord(tfrecord, class_table, size, yolo_max_boxes):
     x = tf.io.parse_single_example(tfrecord, IMAGE_FEATURE_MAP)
     x_train = tf.image.decode_jpeg(x['image/encoded'], channels=3)
-    x_train = tf.image.resize(x_train, (size, size))
+    if size != -1:
+        x_train = tf.image.resize(x_train, (size, size))
     class_text = tf.sparse.to_dense(x['image/object/class/text'], default_value='')
     labels = tf.cast(class_table.lookup(class_text), tf.float32)
     y_train = tf.stack([tf.sparse.to_dense(x['image/object/bbox/xmin']),

@@ -20,18 +20,11 @@ python tools/visualize_dataset.py \
     
 python tools/visualize_dataset.py \
     --classes data/aop.names \
-    --dataset data/aop_train.tfrecord \
+    --dataset data/aop_val.tfrecord \
     --N 10 \
-    --annotations=False \
+    --annotations=True \
     --random=False \
-    --out_dir outputs/aop_raw
-    
-python tools/visualize_dataset.py \
-    --classes data/aop.names \
-    --dataset data/aop_train.tfrecord \
-    --N 10 \
-    --random=False \
-    --out_dir outputs/aop
+    --out_dir outputs/aop/val
 
 Note: bool flag does not take argument, use random=False, or FLAGS.no_random=True
 """
@@ -40,7 +33,7 @@ flags.DEFINE_string('dataset', 'data/aop_train.tfrecord', 'path to dataset tfrec
 flags.DEFINE_integer('N', 1, 'take N images')
 flags.DEFINE_boolean('annotations', True, 'show labels on the image')
 flags.DEFINE_boolean('random', True, 'randomly take images or not')
-flags.DEFINE_integer('size', 500, 'resize images to')
+flags.DEFINE_integer('size', -1, 'resize images (-1: no resize)')
 flags.DEFINE_string('out_dir', 'outputs/aop', 'directory of output images')
 flags.DEFINE_integer('yolo_max_boxes', 100, 'maximum number of boxes per image')
 # sys.argv = ['']
@@ -56,6 +49,7 @@ def main(_argv):
     # print("debug: ********* ", inspect.signature(load_tfrecord_dataset))
     # print("debug: ********* random =", FLAGS.random)
     dataset = load_tfrecord_dataset(FLAGS.dataset, FLAGS.classes, FLAGS.size, FLAGS.yolo_max_boxes)
+    num_records = sum(1 for _ in dataset)
     if FLAGS.random:
         dataset = dataset.shuffle(512)
     for ii, (image, labels) in enumerate(dataset.take(FLAGS.N)):
@@ -76,7 +70,8 @@ def main(_argv):
         output_path = os.path.join(FLAGS.out_dir, "out{}.jpg".format(ii))
         cv2.imwrite(output_path, img)
         logging.info('output saved to: {}'.format(output_path))
-
+    logging.info("Total number of records: {}".format(num_records))
+    
 
 if __name__ == '__main__':
     app.run(main)
