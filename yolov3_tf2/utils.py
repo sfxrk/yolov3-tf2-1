@@ -111,6 +111,7 @@ def draw_outputs(img, outputs, class_names):
     fontScale = 0.5
     fontFace = cv2.FONT_HERSHEY_SIMPLEX
     boxes, objectness, classes = outputs
+    boxes, objectness, classes = boxes[0], objectness[0], classes[0] # for yolo(img) outputs
     num_boxes = len(boxes)
     wh = np.flip(img.shape[0:2])
     colors = get_class_colors(len(class_names))

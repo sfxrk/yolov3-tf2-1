@@ -9,10 +9,12 @@ from yolov3_tf2.dataset import transform_images, load_tfrecord_dataset
 from yolov3_tf2.utils import draw_outputs
 
 """
-python detect.py --classes ./data/aop.names \
-    --weights ./checkpoints/yolov3_train_1.tf \
-    --tfrecord ./data/aop_val.tfrecord \
-    --num_classes 10
+python detect.py --classes data/aop.names \
+    --weights checkpoints/aop_train_30.tf \
+    --image data/braun1.jpg \
+    --num_classes 10 \
+    --yolo_iou_threshold 0.1 \
+    --yolo_score_threshold 0.1
         
 """
 flags.DEFINE_string('classes', './data/coco.names', 'path to classes file')
@@ -23,6 +25,9 @@ flags.DEFINE_string('image', './data/girl.png', 'path to input image')
 flags.DEFINE_string('tfrecord', None, 'tfrecord instead of image')
 flags.DEFINE_string('output', './output.jpg', 'path to output image')
 flags.DEFINE_integer('num_classes', 80, 'number of classes in the model')
+flags.DEFINE_integer('yolo_max_boxes', 100, 'maximum number of boxes per image')
+flags.DEFINE_float('yolo_iou_threshold', 0.5, 'iou threshold')
+flags.DEFINE_float('yolo_score_threshold', 0.5, 'score threshold')
 
 
 def main(_argv):
@@ -60,7 +65,7 @@ def main(_argv):
                                            np.array(boxes[0][i])))
 
     img = cv2.cvtColor(img_raw.numpy(), cv2.COLOR_RGB2BGR)
-    img = draw_outputs(img, (boxes, scores, classes, nums), class_names)
+    img = draw_outputs(img, (boxes, scores, classes), class_names)
     cv2.imwrite(FLAGS.output, img)
     logging.info('output saved to: {}'.format(FLAGS.output))
 

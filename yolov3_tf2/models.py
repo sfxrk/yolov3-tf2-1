@@ -111,6 +111,7 @@ def YoloOutput(filters, num_anchors, classes, name=None):
         x = inputs = Input(x_in.shape[1:])
         x = DarknetConv(x, filters * 2, 3)
         x = DarknetConv(x, num_anchors * (classes + 5), 1, batch_norm=False)
+        # e.g., [batch, 13, 13, 3, 80+5]
         x = Lambda(lambda x: tf.reshape(x, (-1, tf.shape(x)[1], tf.shape(x)[2],
                                             num_anchors, classes + 5)))(x)
         return tf.keras.Model(inputs, x, name=name)(x_in)
@@ -118,17 +119,21 @@ def YoloOutput(filters, num_anchors, classes, name=None):
 
 
 def yolo_boxes(pred, anchors, classes):
-    # pred: (batch_size, grid, grid, anchors, (xc, yc, w, h, obj, ...classes))
+    # pred: (batch, grid, grid, anchors, (xc, yc, w, h, obj, num_classes))
     # grid_size: 13, 26, or 52
+    # anchors: 3
+
+    # raw yolo output
     grid_size = tf.shape(pred)[1]
     box_xy, box_wh, objectness, class_probs = tf.split(
         pred, (2, 2, 1, classes), axis=-1)
-
+    # convert to (0, 1)
     box_xy = tf.sigmoid(box_xy)
     objectness = tf.sigmoid(objectness)
     class_probs = tf.sigmoid(class_probs)
     pred_box = tf.concat((box_xy, box_wh), axis=-1)  # original xywh for loss
 
+    # predict boxes based on grids and anchors
     # grid[x][y] == (y, x)
     # gx is grid_size * grid_size
     grid = tf.meshgrid(tf.range(grid_size), tf.range(grid_size)) # [gx, gy]
@@ -147,7 +152,7 @@ def yolo_boxes(pred, anchors, classes):
 def yolo_nms(outputs, anchors, masks, classes):
     # boxes, conf, type
     b, c, t = [], [], []
-
+    # outputs: [3, batch, grid, grid, 3, 80+5]
     for o in outputs:
         b.append(tf.reshape(o[0], (tf.shape(o[0])[0], -1, tf.shape(o[0])[-1])))
         c.append(tf.reshape(o[1], (tf.shape(o[1])[0], -1, tf.shape(o[1])[-1])))
@@ -205,14 +210,14 @@ def YoloV3(size=None, channels=3, anchors=yolo_anchors,
 def YoloLoss(anchors, classes=80, ignore_thresh=0.5):
     def yolo_loss(y_true, y_pred):
         # 1. transform all pred outputs
-        # y_pred: (batch_size, grid, grid, anchors, (xc, yc, w, h, obj, ...cls))
+        # y_pred: (batch, grid, grid, anchors, (xc, yc, w, h, obj, ...cls))
         pred_box, pred_obj, pred_class, pred_xywh = yolo_boxes(
             y_pred, anchors, classes)
         pred_xy = pred_xywh[..., 0:2]
         pred_wh = pred_xywh[..., 2:4]
 
         # 2. transform all true outputs
-        # y_true: (batch_size, grid, grid, anchors, (x1, y1, x2, y2, obj, cls))
+        # y_true: (batch, grid, grid, anchors, (x1, y1, x2, y2, obj, cls))
         true_box, true_obj, true_class_idx = tf.split(y_true, (4, 1, 1), axis=-1)
         # convert label bbox to yolo bbox: (xc, yc, w, h)
         true_xy = (true_box[..., 0:2] + true_box[..., 2:4]) / 2
