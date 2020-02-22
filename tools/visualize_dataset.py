@@ -20,11 +20,11 @@ python tools/visualize_dataset.py \
     
 python tools/visualize_dataset.py \
     --classes data/aop.names \
-    --dataset data/aop_val.tfrecord \
-    --N 10 \
+    --dataset data/aop_train.tfrecord \
+    --N 432 \
     --annotations=True \
     --random=False \
-    --out_dir outputs/aop/val
+    --out_dir outputs/aop/train
 
 Note: bool flag does not take argument, use random=False, or FLAGS.no_random=True
 """
@@ -66,7 +66,8 @@ def main(_argv):
             classes.append(label)
         img = cv2.cvtColor(image.numpy(), cv2.COLOR_RGB2BGR)
         if FLAGS.annotations:
-            img = draw_outputs(img, (boxes, scores, classes), class_names)
+            # img = draw_outputs(img, (boxes, scores, classes), class_names)
+            img = draw_outputs(img, ([boxes], [scores], [classes]), class_names)# consistent with yolo(img) outputs
         output_path = os.path.join(FLAGS.out_dir, "out{}.jpg".format(ii))
         cv2.imwrite(output_path, img)
         logging.info('output saved to: {}'.format(output_path))
