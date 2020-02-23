@@ -9,7 +9,8 @@ from tensorflow.keras.callbacks import (
     ReduceLROnPlateau,
     EarlyStopping,
     ModelCheckpoint,
-    TensorBoard)
+    TensorBoard,
+    LambdaCallback)
 from yolov3_tf2.models import (
     YoloV3, YoloLoss,
     yolo_anchors, yolo_anchor_masks)
@@ -68,11 +69,10 @@ def main(_argv):
         train_dataset = dataset.load_tfrecord_dataset(FLAGS.dataset, FLAGS.classes, FLAGS.size, FLAGS.yolo_max_boxes)
     train_dataset = train_dataset.shuffle(buffer_size=512)
     train_dataset = train_dataset.batch(FLAGS.batch_size)
-    train_dataset = train_dataset.map(lambda x, y: (
-        dataset.transform_images(x, FLAGS.size),
-        dataset.transform_targets(y, anchors, anchor_masks, FLAGS.size)))
-    train_dataset = train_dataset.prefetch(
-        buffer_size=tf.data.experimental.AUTOTUNE)
+    train_dataset = (train_dataset.map(lambda x, y: 
+                                       (dataset.transform_images(x, FLAGS.size),
+                                        dataset.transform_targets(y, anchors, anchor_masks, FLAGS.size))))
+    train_dataset = train_dataset.prefetch(buffer_size=tf.data.experimental.AUTOTUNE)
 
     val_dataset = dataset.load_fake_dataset()
     if FLAGS.val_dataset:

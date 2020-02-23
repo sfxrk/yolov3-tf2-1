@@ -43,29 +43,37 @@ def transform_targets_for_output(y_true, grid_size, anchor_idxs):
 
 
 def transform_targets(y_train, anchors, anchor_masks, size):
+    # y_train: [batch_size, num_boxes, 5], num_boxes=100, (x1, y1, x2, y2, class)
+    # anchors: yolo_anchors, [9, 2], normalized [w, h]
+    # anchor_masks: yolo_anchor_masks, [3, 3], [[3 large], [3 medium], [3 small]]
     y_outs = []
-    grid_size = size // 32
+    grid_size = size // 32 # 416 // 32 = 13
 
     # calculate anchor index for true boxes
     anchors = tf.cast(anchors, tf.float32)
+    # [9]
     anchor_area = anchors[..., 0] * anchors[..., 1]
+    # [batch_size, 100, 2]
     box_wh = y_train[..., 2:4] - y_train[..., 0:2]
-    box_wh = tf.tile(tf.expand_dims(box_wh, -2),
-                     (1, 1, tf.shape(anchors)[0], 1))
+    # [batch_size, 100, 9, 2]
+    box_wh = tf.tile(tf.expand_dims(box_wh, -2), (1, 1, tf.shape(anchors)[0], 1))
+    # [batch_size, 100, 9]
     box_area = box_wh[..., 0] * box_wh[..., 1]
-    intersection = tf.minimum(box_wh[..., 0], anchors[..., 0]) * \
-        tf.minimum(box_wh[..., 1], anchors[..., 1])
+    # [batch_size, 100, 9]
+    intersection = (tf.minimum(box_wh[..., 0], anchors[..., 0]) * 
+                    tf.minimum(box_wh[..., 1], anchors[..., 1]))
+    # [batch_size, 100, 9]
     iou = intersection / (box_area + anchor_area - intersection)
+    # [batch_size, 100]
     anchor_idx = tf.cast(tf.argmax(iou, axis=-1), tf.float32)
+    # [batch_size, 100, 1]
     anchor_idx = tf.expand_dims(anchor_idx, axis=-1)
-
+    # [batch_size, 100, 6]
     y_train = tf.concat([y_train, anchor_idx], axis=-1)
-
+    # for [large, medium, small]
     for anchor_idxs in anchor_masks:
-        y_outs.append(transform_targets_for_output(
-            y_train, grid_size, anchor_idxs))
+        y_outs.append(transform_targets_for_output(y_train, grid_size, anchor_idxs))
         grid_size *= 2
-
     return tuple(y_outs)
 
 

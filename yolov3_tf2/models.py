@@ -125,8 +125,7 @@ def yolo_boxes(pred, anchors, classes):
 
     # raw yolo output
     grid_size = tf.shape(pred)[1]
-    box_xy, box_wh, objectness, class_probs = tf.split(
-        pred, (2, 2, 1, classes), axis=-1)
+    box_xy, box_wh, objectness, class_probs = tf.split(pred, (2, 2, 1, classes), axis=-1)
     # convert to (0, 1)
     box_xy = tf.sigmoid(box_xy)
     objectness = tf.sigmoid(objectness)
@@ -165,13 +164,11 @@ def yolo_nms(outputs, anchors, masks, classes):
     scores = confidence * class_probs
     boxes, scores, classes, valid_detections = tf.image.combined_non_max_suppression(
         boxes=tf.reshape(bbox, (tf.shape(bbox)[0], -1, 1, 4)),
-        scores=tf.reshape(
-            scores, (tf.shape(scores)[0], -1, tf.shape(scores)[-1])),
+        scores=tf.reshape(scores, (tf.shape(scores)[0], -1, tf.shape(scores)[-1])),
         max_output_size_per_class=FLAGS.yolo_max_boxes,
         max_total_size=FLAGS.yolo_max_boxes,
         iou_threshold=FLAGS.yolo_iou_threshold,
-        score_threshold=FLAGS.yolo_score_threshold
-    )
+        score_threshold=FLAGS.yolo_score_threshold)
 
     return boxes, scores, classes, valid_detections
 
@@ -230,11 +227,9 @@ def YoloLoss(anchors, classes=80, ignore_thresh=0.5):
         grid_size = tf.shape(y_true)[1]
         grid = tf.meshgrid(tf.range(grid_size), tf.range(grid_size))
         grid = tf.expand_dims(tf.stack(grid, axis=-1), axis=2)
-        true_xy = true_xy * tf.cast(grid_size, tf.float32) - \
-            tf.cast(grid, tf.float32)
+        true_xy = true_xy * tf.cast(grid_size, tf.float32) - tf.cast(grid, tf.float32)
         true_wh = tf.math.log(true_wh / anchors)
-        true_wh = tf.where(tf.math.is_inf(true_wh),
-                           tf.zeros_like(true_wh), true_wh)
+        true_wh = tf.where(tf.math.is_inf(true_wh), tf.zeros_like(true_wh), true_wh)
 
         # 4. calculate all masks
         obj_mask = tf.squeeze(true_obj, -1)
@@ -255,8 +250,7 @@ def YoloLoss(anchors, classes=80, ignore_thresh=0.5):
         obj_loss = obj_mask * obj_loss + \
             (1 - obj_mask) * ignore_mask * obj_loss
         # TODO: use binary_crossentropy instead
-        class_loss = obj_mask * sparse_categorical_crossentropy(
-            true_class_idx, pred_class)
+        class_loss = obj_mask * sparse_categorical_crossentropy(true_class_idx, pred_class)
 
         # 6. sum over (batch, gridx, gridy, anchors) => (batch, 1)
         xy_loss = tf.reduce_sum(xy_loss, axis=(1, 2, 3))
