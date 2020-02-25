@@ -2,6 +2,7 @@ from absl import flags
 from absl.flags import FLAGS
 import numpy as np
 import tensorflow as tf
+tf.keras.backend.set_image_data_format('channels_last') # for aws ec2 ami
 from tensorflow.keras import Model
 from tensorflow.keras.layers import (
     Add,
