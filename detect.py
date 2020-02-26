@@ -48,7 +48,7 @@ def main(_argv):
         # randomly select one image from tfrecord
         dataset = load_tfrecord_dataset(
             FLAGS.tfrecord, FLAGS.classes, FLAGS.size)
-        # dataset = dataset.shuffle(512)
+        dataset = dataset.shuffle(512)
         img_raw, _label = next(iter(dataset.take(1)))
     else:
         img_raw = tf.image.decode_image(
