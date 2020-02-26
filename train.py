@@ -22,12 +22,12 @@ import yolov3_tf2.dataset as dataset
 
 # python train.py --batch_size 1 --dataset ./data/voc2012_train.tfrecord --val_dataset ./data/voc2012_val.tfrecord --epochs 10 --mode fit --transfer fine_tune
 """
-python train.py --batch_size 1 \
+python train.py --batch_size 8 \
     --dataset ./data/aop_train.tfrecord \
     --val_dataset ./data/aop_val.tfrecord \
     --num_classes 10 \
     --classes ./data/aop.names \
-    --epochs 10 \
+    --epochs 30 \
     --mode fit \
     --transfer darknet \
     --weights_num_classes 80
