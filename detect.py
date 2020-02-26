@@ -10,7 +10,7 @@ from yolov3_tf2.utils import draw_outputs
 
 """
 python detect.py --classes data/aop.names \
-    --weights checkpoints/train_21.tf \
+    --weights checkpoints/train_30.tf \
     --tfrecord data/aop_val.tfrecord \
     --num_classes 10 \
     --yolo_iou_threshold 0.1 \
@@ -46,7 +46,7 @@ def main(_argv):
         # randomly select one image from tfrecord
         dataset = load_tfrecord_dataset(
             FLAGS.tfrecord, FLAGS.classes, FLAGS.size)
-        dataset = dataset.shuffle(512)
+        # dataset = dataset.shuffle(512)
         img_raw, _label = next(iter(dataset.take(1)))
     else:
         img_raw = tf.image.decode_image(
