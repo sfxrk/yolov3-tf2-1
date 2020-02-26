@@ -173,6 +173,15 @@ def yolo_nms(outputs, anchors, masks, classes):
 
     return boxes, scores, classes, valid_detections
 
+def yolo_predict_boxes(outputs, classes=80,
+                       anchors=yolo_anchors, masks=yolo_anchor_masks):
+    boxes_0 = Lambda(lambda x: yolo_boxes(x, anchors[masks[0]], classes), name='yolo_boxes_0')(outputs[0])
+    boxes_1 = Lambda(lambda x: yolo_boxes(x, anchors[masks[1]], classes), name='yolo_boxes_1')(outputs[1])
+    boxes_2 = Lambda(lambda x: yolo_boxes(x, anchors[masks[2]], classes), name='yolo_boxes_2')(outputs[2])
+    boxes = Lambda(lambda x: yolo_nms(x, anchors, masks, classes),
+                      name='yolo_nms')((boxes_0[:3], boxes_1[:3], boxes_2[:3]))
+    return boxes
+
 
 def YoloV3(size=None, channels=3, anchors=yolo_anchors,
            masks=yolo_anchor_masks, classes=80, training=False):
@@ -190,12 +199,8 @@ def YoloV3(size=None, channels=3, anchors=yolo_anchors,
     output_2 = YoloOutput(128, len(masks[2]), classes, name='yolo_output_2')(x)
     if training:
         return Model(inputs, (output_0, output_1, output_2), name='yolov3')
-    boxes_0 = Lambda(lambda x: yolo_boxes(x, anchors[masks[0]], classes), name='yolo_boxes_0')(output_0)
-    boxes_1 = Lambda(lambda x: yolo_boxes(x, anchors[masks[1]], classes), name='yolo_boxes_1')(output_1)
-    boxes_2 = Lambda(lambda x: yolo_boxes(x, anchors[masks[2]], classes), name='yolo_boxes_2')(output_2)
-    outputs = Lambda(lambda x: yolo_nms(x, anchors, masks, classes),
-                      name='yolo_nms')((boxes_0[:3], boxes_1[:3], boxes_2[:3]))
-    return Model(inputs, outputs, name='yolov3')
+    boxes = yolo_predict_boxes((output_0, output_1, output_2), classes, anchors, masks)
+    return Model(inputs, boxes, name='yolov3')
 
 
 # def YoloV3(size=None, channels=3, anchors=yolo_anchors,

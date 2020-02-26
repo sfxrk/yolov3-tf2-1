@@ -10,7 +10,7 @@ from yolov3_tf2.utils import draw_outputs
 
 """
 python detect.py --classes data/aop.names \
-    --weights checkpoints/train_20.tf \
+    --weights checkpoints/aop_train_30.tf \
     --tfrecord data/aop_val.tfrecord \
     --num_classes 10 \
     --yolo_iou_threshold 0.1 \

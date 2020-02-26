@@ -12,10 +12,11 @@ from tensorflow.keras.callbacks import (
     TensorBoard,
     LambdaCallback)
 from yolov3_tf2.models import (
-    YoloV3, YoloLoss,
+    YoloV3, YoloLoss, yolo_predict_boxes,
     yolo_anchors, yolo_anchor_masks)
 from yolov3_tf2.utils import freeze_all
 import yolov3_tf2.dataset as dataset
+from yolov3_tf2.utils import draw_outputs
 
 """
 python train.py --batch_size 1 \
@@ -24,7 +25,7 @@ python train.py --batch_size 1 \
     --num_classes 10 \
     --classes data/aop.names \
     --epochs 2 \
-    --mode fit\
+    --mode eager_tf \
     --transfer darknet \
     --weights_num_classes 80
 """
@@ -129,7 +130,7 @@ def main(_argv):
         # Non eager graph mode is recommended for real training
         avg_loss = tf.keras.metrics.Mean('loss', dtype=tf.float32)
         avg_val_loss = tf.keras.metrics.Mean('val_loss', dtype=tf.float32)
-
+        total_step = 0
         for epoch in range(1, FLAGS.epochs + 1):
             for batch, (images, labels) in enumerate(train_dataset):
                 with tf.GradientTape() as tape:
@@ -139,24 +140,28 @@ def main(_argv):
                     for output, label, loss_fn in zip(outputs, labels, loss):
                         pred_loss.append(loss_fn(label, output))
                     total_loss = tf.reduce_sum(pred_loss) + regularization_loss
-
                 grads = tape.gradient(total_loss, model.trainable_variables)
                 optimizer.apply_gradients(
                     zip(grads, model.trainable_variables))
-
                 logging.info("{}_train_{}, {}, {}".format(
                     epoch, batch, total_loss.numpy(),
                     list(map(lambda x: np.sum(x.numpy()), pred_loss))))
                 avg_loss.update_state(total_loss)
+                total_step += 1
                 # Using the file writer, log images
-                """
+                pred_outputs = yolo_predict_boxes(outputs, FLAGS.num_classes, anchors, anchor_masks)
+                pred_boxes, pred_scores, pred_classes, max_boxes = pred_outputs
+                if total_step == 15:
+                    test_break = 1
+                logging.info("{}, {}, {}".format(epoch, batch, pred_boxes))
                 img = images[0]
-                img = cv2.cvtColor(img.numpy(), cv2.COLOR_RGB2BGR)
-                img = draw_outputs(img, (boxes, scores, classes), class_names)
-                cv2.imwrite(FLAGS.output, img)
-                """
+                img = cv2.cvtColor(img.numpy()*255, cv2.COLOR_RGB2BGR)
+                img = draw_outputs(img, (pred_boxes[:1], pred_scores[:1], pred_classes[:1]), class_names)
+                # cv2.imwrite('output1.jpg', img)
+                img = tf.expand_dims(img, 0)
+                img = dataset.transform_images(img, FLAGS.size)
                 with file_writer.as_default():
-                    tf.summary.image("Training data", images, step=batch, max_outputs=1)
+                    tf.summary.image("Training data", img, step=total_step, max_outputs=1)
 
             for batch, (images, labels) in enumerate(val_dataset):
                 outputs = model(images)
@@ -190,7 +195,8 @@ def main(_argv):
         history = model.fit(train_dataset,
                             epochs=FLAGS.epochs,
                             callbacks=callbacks,
-                            validation_data=val_dataset)
+                            # validation_data=val_dataset
+                            )
 
 
 if __name__ == '__main__':

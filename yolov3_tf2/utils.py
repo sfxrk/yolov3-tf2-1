@@ -115,7 +115,7 @@ def draw_outputs(img, outputs, class_names):
     num_boxes = len(boxes)
     wh = np.flip(img.shape[0:2])
     colors = get_class_colors(len(class_names))
-    bbox_thick = int(0.6 * (wh[1] + wh[0]) / 600)
+    bbox_thick = int(1.0 * (wh[1] + wh[0]) / 400)
     for i in range(num_boxes):
         class_ind = int(classes[i])
         class_color = colors[class_ind]
