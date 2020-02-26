@@ -24,7 +24,7 @@ python train.py --batch_size 1 \
     --num_classes 10 \
     --classes data/aop.names \
     --epochs 2 \
-    --mode eager_tf \
+    --mode fit\
     --transfer darknet \
     --weights_num_classes 80
 """
