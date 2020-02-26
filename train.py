@@ -24,19 +24,19 @@ python train.py --batch_size 1 \
     --num_classes 10 \
     --classes data/aop.names \
     --epochs 2 \
-    --mode fit \
+    --mode eager_tf \
     --transfer darknet \
     --weights_num_classes 80
 """
-flags.DEFINE_string('dataset', 'data/aop_train.tfrecord', 'path to dataset')
-flags.DEFINE_string('val_dataset', 'data/aop_val.tfrecord', 'path to validation dataset')
-flags.DEFINE_string('classes', 'data/aop.names', 'path to classes file')
-flags.DEFINE_string('weights', 'checkpoints/yolov3.tf', 'path to weights file')
-flags.DEFINE_enum('mode', 'fit', ['fit', 'eager_fit', 'eager_tf'],
+flags.DEFINE_string('dataset', './data/aop_train.tfrecord', 'path to dataset')
+flags.DEFINE_string('val_dataset', './data/aop_val.tfrecord', 'path to validation dataset')
+flags.DEFINE_string('classes', './data/aop.names', 'path to classes file')
+flags.DEFINE_string('weights', './checkpoints/yolov3.tf', 'path to weights file')
+flags.DEFINE_enum('mode', 'eager_tf', ['fit', 'eager_fit', 'eager_tf'],
                   'fit: model.fit, '
                   'eager_fit: model.fit(run_eagerly=True), '
                   'eager_tf: custom GradientTape')
-flags.DEFINE_enum('transfer', 'none',
+flags.DEFINE_enum('transfer', 'darknet',
                   ['none', 'darknet', 'no_output', 'frozen', 'fine_tune'],
                   'none: Training from scratch, '
                   'darknet: Transfer darknet, '
@@ -44,8 +44,8 @@ flags.DEFINE_enum('transfer', 'none',
                   'frozen: Transfer and freeze all, '
                   'fine_tune: Transfer all and freeze darknet only')
 flags.DEFINE_integer('size', 416, 'image resize')
-flags.DEFINE_integer('epochs', 2, 'number of epochs')
-flags.DEFINE_integer('batch_size', 8, 'batch size')
+flags.DEFINE_integer('epochs', 1, 'number of epochs')
+flags.DEFINE_integer('batch_size', 1, 'batch size')
 flags.DEFINE_float('learning_rate', 1e-3, 'learning rate')
 flags.DEFINE_integer('num_classes', 10, 'number of classes in the model')
 flags.DEFINE_integer('weights_num_classes', 80, 'specify num class for `weights` file if different, '
@@ -63,6 +63,8 @@ def main(_argv):
     model = YoloV3(FLAGS.size, training=True, classes=FLAGS.num_classes)
     anchors = yolo_anchors
     anchor_masks = yolo_anchor_masks
+    log_dir = os.path.join("logs", datetime.now().strftime('%Y%m%d-%H%M%S'))
+    class_names = [c.strip() for c in open(FLAGS.classes).readlines()]
 
     train_dataset = dataset.load_fake_dataset()
     if FLAGS.dataset:
@@ -121,6 +123,8 @@ def main(_argv):
     loss = [YoloLoss(anchors[mask], classes=FLAGS.num_classes)
             for mask in anchor_masks]
     if FLAGS.mode == 'eager_tf':
+        file_writer = tf.summary.create_file_writer(log_dir)
+
         # Eager mode is great for debugging
         # Non eager graph mode is recommended for real training
         avg_loss = tf.keras.metrics.Mean('loss', dtype=tf.float32)
@@ -144,6 +148,15 @@ def main(_argv):
                     epoch, batch, total_loss.numpy(),
                     list(map(lambda x: np.sum(x.numpy()), pred_loss))))
                 avg_loss.update_state(total_loss)
+                # Using the file writer, log images
+                """
+                img = images[0]
+                img = cv2.cvtColor(img.numpy(), cv2.COLOR_RGB2BGR)
+                img = draw_outputs(img, (boxes, scores, classes), class_names)
+                cv2.imwrite(FLAGS.output, img)
+                """
+                with file_writer.as_default():
+                    tf.summary.image("Training data", images, step=batch, max_outputs=1)
 
             for batch, (images, labels) in enumerate(val_dataset):
                 outputs = model(images)
@@ -169,7 +182,6 @@ def main(_argv):
     else:
         model.compile(optimizer=optimizer, loss=loss,
                       run_eagerly=(FLAGS.mode == 'eager_fit'))
-        log_dir = os.path.join("logs", datetime.now().strftime('%Y%m%d-%H%M%S'))
         callbacks = [
             ReduceLROnPlateau(verbose=1),
             EarlyStopping(patience=3, verbose=1),
