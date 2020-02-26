@@ -202,10 +202,8 @@ def main(_argv):
         callbacks = [
             ReduceLROnPlateau(verbose=1),
             EarlyStopping(patience=3, verbose=1),
-            ModelCheckpoint('checkpoints/yolov3_train_{epoch}.tf',
-                            verbose=1, save_weights_only=True),
-            TensorBoard(log_dir=log_dir, update_freq='batch')
-        ]
+            ModelCheckpoint('checkpoints/train_{epoch}.tf', verbose=1, save_weights_only=True),
+            TensorBoard(log_dir=log_dir, update_freq='batch', profile_batch=0)]
 
         history = model.fit(train_dataset,
                             epochs=FLAGS.epochs,
